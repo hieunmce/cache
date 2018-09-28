@@ -10,7 +10,8 @@ import (
 
 func TestFetchCache_Fetch(t *testing.T) {
 	var (
-		fakeFetchID = "dca76878-a8f6-4ff5-b263-1e8c7e61bc20"
+		fakeFetchID     = "dca76878-a8f6-4ff5-b263-1e8c7e61bc20"
+		notExistModelID = "5634aeed-2106-43de-ab7d-c0ad4b1e195e"
 	)
 
 	type fields struct {
@@ -30,7 +31,7 @@ func TestFetchCache_Fetch(t *testing.T) {
 		callCount        int
 	}{
 		{
-			name: "test normal case",
+			name: "success get cache and check service number of request to service",
 			args: args{
 				ctx: context.Background(),
 				id:  fakeFetchID,
@@ -40,10 +41,10 @@ func TestFetchCache_Fetch(t *testing.T) {
 			callCount:        1000,
 		},
 		{
-			name: "test normal case",
+			name: "failed get case by id not exist",
 			args: args{
 				ctx: context.Background(),
-				id:  "eeebf00e-3401-40e8-b912-c3b64e429e5c",
+				id:  notExistModelID,
 			},
 			wantErr: true,
 		},
@@ -123,7 +124,7 @@ func TestFetchCache_Clear(t *testing.T) {
 		remainCount int
 	}{
 		{
-			name: "test normal case",
+			name: "success remove item by correct id",
 			args: args{
 				id: fakeFetchID,
 			},
