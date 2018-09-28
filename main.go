@@ -73,11 +73,11 @@ type item struct {
 }
 
 // expired Returns true if the item has expired.
-func (item item) expired() bool {
-	if item.Expiration == 0 {
+func (i *item) expired() bool {
+	if i.Expiration == 0 {
 		return false
 	}
-	return time.Now().UnixNano() > item.Expiration
+	return time.Now().UnixNano() > i.Expiration
 }
 
 // Fetch implements Fetcher.
