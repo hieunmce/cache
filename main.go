@@ -95,6 +95,8 @@ func (fc *FetchCache) Fetch(ctx context.Context, id string) (*Model, error) {
 
 // Clear item by id
 func (fc *FetchCache) Clear(id string) {
+	fc.mu.Lock()
+	defer fc.mu.Unlock()
 	if _, found := fc.items[id]; !found {
 		return
 	}

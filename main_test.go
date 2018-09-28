@@ -94,3 +94,51 @@ func TestFetchCache_Fetch(t *testing.T) {
 		})
 	}
 }
+
+func TestFetchCache_Clear(t *testing.T) {
+	var (
+		fakeFetchID = "dca76878-a8f6-4ff5-b263-1e8c7e61bc20"
+	)
+
+	mockedFetcher := &FetcherMock{
+		FetchFunc: func(ctx context.Context, id string) (*Model, error) {
+			if id == fakeFetchID {
+				return &Model{Name: "lorem"}, nil
+			}
+
+			return nil, errors.New("not found model")
+		},
+	}
+
+	type fields struct {
+		f Fetcher
+	}
+	type args struct {
+		id string
+	}
+	tests := []struct {
+		name        string
+		fields      fields
+		args        args
+		remainCount int
+	}{
+		{
+			name: "test normal case",
+			args: args{
+				id: fakeFetchID,
+			},
+			remainCount: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fc := NewCache(mockedFetcher)
+			_, _ = fc.Fetch(context.Background(), fakeFetchID)
+			fc.Clear(tt.args.id)
+
+			if len(fc.items) != tt.remainCount {
+				t.Errorf("FetchCache.Clear() expect remain items count = %v, actual item count = %v", tt.remainCount, len(fc.items))
+			}
+		})
+	}
+}
