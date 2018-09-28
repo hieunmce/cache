@@ -66,7 +66,7 @@ type cache struct {
 	mu    sync.RWMutex
 }
 
-// item --
+// item is a struct contains a resource model and its expiration
 type item struct {
 	Object     *Model
 	Expiration int64
