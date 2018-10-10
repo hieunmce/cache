@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// Test FetchCache can fetch multiple id without blocking each other
+// expect the time to run in concurrency of 11 go-routine is smaller than the time to run 2 normal tasks
 func TestFetchCache_Fetch_MultipleID_NonBlock(t *testing.T) {
 	var (
 		ids = []string{
