@@ -44,6 +44,7 @@ func NewCache(f Fetcher) *FetchCache {
 	return &FetchCache{
 		cache: newCache(),
 		f:     f,
+		m:     &sync.Map{},
 	}
 }
 
@@ -58,12 +59,37 @@ func newCache() *cache {
 // A FetchCache is safe for use by multiple goroutines simultaneously.
 type FetchCache struct {
 	f Fetcher
+	m *sync.Map
 	*cache
+}
+
+// Lock lock cache by key
+func (fc *FetchCache) Lock(key interface{}) {
+	m := sync.Mutex{}
+	tmp, _ := fc.m.LoadOrStore(key, &m)
+	mm := tmp.(*sync.Mutex)
+	mm.Lock()
+	if mm != &m {
+		mm.Unlock()
+		fc.Lock(key)
+		return
+	}
+	return
+}
+
+// Unlock cache by key
+func (fc *FetchCache) Unlock(key interface{}) {
+	l, exist := fc.m.Load(key)
+	if !exist {
+		return
+	}
+	tmp := l.(*sync.Mutex)
+	fc.m.Delete(key)
+	tmp.Unlock()
 }
 
 type cache struct {
 	items map[string]item
-	mu    sync.RWMutex
 }
 
 // item is a struct contains a resource model and its expiration
@@ -82,9 +108,8 @@ func (i *item) expired() bool {
 
 // Fetch implements Fetcher.
 func (fc *FetchCache) Fetch(ctx context.Context, id string) (*Model, error) {
-	fc.mu.Lock()
-	defer fc.mu.Unlock()
-
+	fc.Lock(id)
+	defer fc.Unlock(id)
 	item, found := fc.fetchFromCache(id)
 	if !found {
 		return fc.fetchFromFetcher(ctx, id)
@@ -95,8 +120,8 @@ func (fc *FetchCache) Fetch(ctx context.Context, id string) (*Model, error) {
 
 // Clear item by id
 func (fc *FetchCache) Clear(id string) {
-	fc.mu.Lock()
-	defer fc.mu.Unlock()
+	fc.Lock(id)
+	defer fc.Unlock(id)
 	if _, found := fc.items[id]; !found {
 		return
 	}
