@@ -38,7 +38,7 @@ func TestFetchCache_Fetch(t *testing.T) {
 			},
 			want:             &Model{Name: "lorem"},
 			serviceCallCount: 1,
-			callCount:        1000,
+			callCount:        100000,
 		},
 		{
 			name: "failed get case by id not exist",
@@ -77,7 +77,7 @@ func TestFetchCache_Fetch(t *testing.T) {
 				}
 				wg.Wait()
 				if tt.serviceCallCount != serviceCallCount {
-					t.Errorf("FetchCache.Fetch() expect service count = %v, want service call count %v", tt.serviceCallCount, serviceCallCount)
+					t.Errorf("FetchCache.Fetch() expect service count = %v, have service call count %v", tt.serviceCallCount, serviceCallCount)
 					return
 				}
 			}

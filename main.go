@@ -49,7 +49,8 @@ func NewCache(f Fetcher) *FetchCache {
 
 func newCache() *cache {
 	return &cache{
-		items: make(map[string]item),
+		items:   make(map[string]item),
+		RWMutex: &sync.RWMutex{},
 	}
 }
 
@@ -63,7 +64,7 @@ type FetchCache struct {
 
 type cache struct {
 	items map[string]item
-	mu    sync.RWMutex
+	*sync.RWMutex
 }
 
 // item is a struct contains a resource model and its expiration
@@ -82,9 +83,6 @@ func (i *item) expired() bool {
 
 // Fetch implements Fetcher.
 func (fc *FetchCache) Fetch(ctx context.Context, id string) (*Model, error) {
-	fc.mu.Lock()
-	defer fc.mu.Unlock()
-
 	item, found := fc.fetchFromCache(id)
 	if !found {
 		return fc.fetchFromFetcher(ctx, id)
@@ -95,8 +93,8 @@ func (fc *FetchCache) Fetch(ctx context.Context, id string) (*Model, error) {
 
 // Clear item by id
 func (fc *FetchCache) Clear(id string) {
-	fc.mu.Lock()
-	defer fc.mu.Unlock()
+	fc.Lock()
+	defer fc.Unlock()
 	if _, found := fc.items[id]; !found {
 		return
 	}
@@ -105,6 +103,8 @@ func (fc *FetchCache) Clear(id string) {
 }
 
 func (fc *FetchCache) fetchFromCache(id string) (item, bool) {
+	fc.Lock()
+	defer fc.Unlock()
 	i, found := fc.items[id]
 	if !found || i.expired() {
 		return item{}, false
@@ -125,6 +125,8 @@ func (fc *FetchCache) fetchFromFetcher(ctx context.Context, id string) (*Model, 
 }
 
 func (fc *FetchCache) cacheitem(id string, model *Model) {
+	fc.Lock()
+	defer fc.Unlock()
 	fc.items[id] = item{
 		Object:     model,
 		Expiration: int64(DefaultExpiration),
