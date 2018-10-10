@@ -71,7 +71,7 @@ func (fc *FetchCache) Lock(key interface{}) {
 	tmp, _ := fc.keyLock.LoadOrStore(key, &m)
 	mm := tmp.(*sync.Mutex)
 	mm.Lock()
-	if mm != &m {
+	if mm != &m { // if item get from map is different from original && retry to lock that key
 		mm.Unlock()
 		fc.Lock(key)
 		return
