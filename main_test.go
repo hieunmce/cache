@@ -6,7 +6,51 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 )
+
+func TestFetchCache_Fetch_MultipleID_NonBlock(t *testing.T) {
+	var (
+		ids = []string{
+			"7e1588ab-2bf9-44b0-a7ae-41c9ef3c86af",
+			"6bff5837-c618-46ac-ae27-4544e08b099e",
+			"ecdcb84d-7c42-4242-9e46-bb3b9fbe4312",
+			"530bc2d6-3023-4206-aa0c-9d21dbb7d0a9",
+			"f76dd77f-a46d-45d9-a0cd-e2fe66a6820a",
+			"896ad76d-0022-4543-be16-91d68f747715",
+			"d90f89ae-cc4c-45b4-9b58-8ff322a39f5b",
+			"3b0dcd0b-e585-43be-a5fe-aba5370bfa77",
+			"4e63323c-844e-4d85-8cc4-93bb2830aeb5",
+			"c5bcb00e-1141-4a17-93e2-b91c7d42cdcc",
+			"8e41c031-843a-453c-8a80-ff03c7eb265c",
+		}
+	)
+
+	sleepDuration := 10 * time.Millisecond
+
+	mockedFetcher := &FetcherMock{
+		FetchFunc: func(ctx context.Context, id string) (*Model, error) {
+			time.Sleep(sleepDuration)
+			return &Model{Name: id}, nil
+		},
+	}
+	fc := NewCache(mockedFetcher)
+	var wg sync.WaitGroup
+	wg.Add(len(ids))
+	start := time.Now()
+
+	for i := 0; i < len(ids); i++ {
+		go func(ii int) {
+			_, _ = fc.Fetch(context.Background(), ids[ii])
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	elapsed := time.Since(start)
+	if elapsed > sleepDuration*2 {
+		t.Errorf("FetchCache.Fetch() expect duration for 11 goroutine smaller than %v, have duration for the call %v", sleepDuration*2, elapsed)
+	}
+}
 
 func TestFetchCache_Fetch(t *testing.T) {
 	var (
@@ -38,7 +82,7 @@ func TestFetchCache_Fetch(t *testing.T) {
 			},
 			want:             &Model{Name: "lorem"},
 			serviceCallCount: 1,
-			callCount:        100000,
+			callCount:        1000,
 		},
 		{
 			name: "failed get case by id not exist",

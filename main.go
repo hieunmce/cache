@@ -42,9 +42,10 @@ type Fetcher interface {
 // See FetchCache for more details.
 func NewCache(f Fetcher) *FetchCache {
 	return &FetchCache{
-		cache: newCache(),
-		f:     f,
-		m:     &sync.Map{},
+		cache:     newCache(),
+		f:         f,
+		keyLock:   &sync.Map{},
+		writeLock: &sync.Mutex{},
 	}
 }
 
@@ -58,15 +59,16 @@ func newCache() *cache {
 //
 // A FetchCache is safe for use by multiple goroutines simultaneously.
 type FetchCache struct {
-	f Fetcher
-	m *sync.Map
+	f         Fetcher
+	keyLock   *sync.Map
+	writeLock *sync.Mutex
 	*cache
 }
 
 // Lock lock cache by key
 func (fc *FetchCache) Lock(key interface{}) {
 	m := sync.Mutex{}
-	tmp, _ := fc.m.LoadOrStore(key, &m)
+	tmp, _ := fc.keyLock.LoadOrStore(key, &m)
 	mm := tmp.(*sync.Mutex)
 	mm.Lock()
 	if mm != &m {
@@ -79,12 +81,12 @@ func (fc *FetchCache) Lock(key interface{}) {
 
 // Unlock cache by key
 func (fc *FetchCache) Unlock(key interface{}) {
-	l, exist := fc.m.Load(key)
+	l, exist := fc.keyLock.Load(key)
 	if !exist {
 		return
 	}
 	tmp := l.(*sync.Mutex)
-	fc.m.Delete(key)
+	fc.keyLock.Delete(key)
 	tmp.Unlock()
 }
 
@@ -150,8 +152,10 @@ func (fc *FetchCache) fetchFromFetcher(ctx context.Context, id string) (*Model, 
 }
 
 func (fc *FetchCache) cacheitem(id string, model *Model) {
+	fc.writeLock.Lock()
 	fc.items[id] = item{
 		Object:     model,
 		Expiration: int64(DefaultExpiration),
 	}
+	fc.writeLock.Unlock()
 }
